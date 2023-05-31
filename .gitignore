@@ -1,2 +1,6 @@
 scraper
-config.txt
+indeed-config.json
+tmp
+coverage.out
+.vscode
+.env

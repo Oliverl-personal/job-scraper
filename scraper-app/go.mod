@@ -1,4 +1,4 @@
-module github.com/Oliverl-personal/job-scraper
+module github.com/Oliverl-personal/job-scraper/scaper-app
 
 go 1.20
 
