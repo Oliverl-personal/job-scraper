@@ -13,10 +13,19 @@ import (
 	"github.com/gocolly/colly"
 )
 
-const logFile string = "tmp/log.txt"
-const jobsFile string = "tmp/jobs.json"
-const headerKey string = "User-Agent"
-const headerValue string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+const (
+	logFile     string = "../tmp/log.txt"
+	jobsFile    string = "../tmp/jobs.json"
+	headerKey   string = "User-Agent"
+	headerValue string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+)
+
+const (
+	info    string = "Info: "
+	err     string = "Error: "
+	debug   string = "Debug: "
+	warning string = "Warning: "
+)
 
 type JobPosting struct {
 	Title          string
@@ -177,7 +186,7 @@ func InitCollyCollector() *colly.Collector {
 func ScrapeJobs(url string, headerK string, headerVal string, selector JobPosting, c *colly.Collector, wg *sync.WaitGroup) map[string][]string {
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Set(headerK, headerVal)
-		log.Printf("Accessing site %s\n", url)
+		log.Printf("%s Accessing site %s\n", info, url)
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
@@ -188,7 +197,7 @@ func ScrapeJobs(url string, headerK string, headerVal string, selector JobPostin
 	jobs := map[string][]string{}
 	v := reflect.ValueOf(selector)
 	if v.NumField() < 1 {
-		log.Fatalf("selector does not have any fields")
+		log.Fatalf("%s Selector does not have any fields", err)
 	}
 
 	for i := 0; i < v.NumField(); i++ {
@@ -242,7 +251,14 @@ func main() {
 		"span.HBvzbc",
 	}
 
-	site := "https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB#fpstate=tldetail&htivrt=jobs&htiq=google+jobs&htidocid=62Cp48ic5HcAAAAAAAAAAA%3D%3D&sxsrf=APwXEddxiGmYcOLYx4Ch3xy2ZKw-5YzDAg:1685481463433"
+	// googleSelector := JobPosting{
+	// 	".whazf h2.KLsYvd",
+	// 	".whazf div.nJlQNd.sMzDkb",
+	// 	".whazf div.sMzDkb:not(.nJlQNd)",
+	// 	".whazf span.HBvzbc",
+	// }
+
+	site := "https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB"
 
 	file, err := os.Create(logFile)
 	LogErr(err)
@@ -265,7 +281,7 @@ func main() {
 	LogErr(err)
 
 	// write to file
-	log.Printf("Adding jobs to %s\n", jobsFile)
+	log.Printf("%s Adding jobs to %s\n", info, jobsFile)
 	f, err := os.Create(jobsFile)
 	LogErr(err)
 	defer f.Close()

@@ -25,4 +25,21 @@ Internships, co-op, and full time job applications are a natural part of my fore
   - Post Availability
   - Seed URLs of job banks
 
+
+## Helpful Project Tips
+### Run Linter:
+Go to file directory and run the following command:
+`golangci-lint run [dir_name containing .go files]`
+
+### Run Test:
+Go to the test file directory and run the following command:
+`go test [dir_name containing go_test files]` ex.  `go test ./cmd`
+
+#### Options:
+Verbose:
+`go test -v`
+
+Code Coverage:
+`go test -cover`
+
 ## Acknowledgements
