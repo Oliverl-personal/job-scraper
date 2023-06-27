@@ -8,7 +8,8 @@ import (
 type MapData struct {
 	data   map[string][]string
 	expRes bool
-	expErr bool //T if error expected (err != nil), false otherwise
+	// True if error expected (err != nil), false otherwise
+	expErr bool
 }
 
 func TestCheckOutputJobs(t *testing.T) {
@@ -25,7 +26,7 @@ func TestCheckOutputJobs(t *testing.T) {
 		{data: sample4, expRes: false, expErr: true},
 	}
 	for _, elem := range testData {
-		get, getErr := CheckOutputJobs(elem.data)
+		get, getErr := checkOutputJobs(elem.data)
 		if get != elem.expRes {
 			t.Errorf("CheckOutputJobs() FAILED: Expected %t, Actual: %t", get, elem.expRes)
 		}
@@ -56,7 +57,8 @@ func TestAndFilter(t *testing.T) {
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
 		{"k": "k k k", "l": "l l l", "JobDescription": "l b l"},
-		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"}}
+		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"},
+	}
 
 	filter0 := []string{}
 	filter1 := []string{"a"}
@@ -74,7 +76,8 @@ func TestAndFilter(t *testing.T) {
 		{"e": "e e e", "f": "f f f", "JobDescription": "A g f"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i b"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
-		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"}}
+		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
+	}
 
 	expected2 := []map[string]string{
 		{"a": "a a a", "b": "b b b", "JobDescription": "a b c"},
@@ -82,7 +85,8 @@ func TestAndFilter(t *testing.T) {
 		{"a": "a a a", "b": "b b b", "JobDescription": "A b c"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i b"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
-		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"}}
+		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
+	}
 
 	expected3 := []map[string]string{
 		{"a": "a a a", "b": "b b b", "JobDescription": "a b c"},
@@ -90,11 +94,13 @@ func TestAndFilter(t *testing.T) {
 		{"a": "a a a", "b": "b b b", "JobDescription": "A b c"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i b"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
-		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"}}
+		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
+	}
 	expected4 := []map[string]string{
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i b"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
-		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"}}
+		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
+	}
 
 	expected5 := []map[string]string{}
 
@@ -108,7 +114,7 @@ func TestAndFilter(t *testing.T) {
 	}
 	i := 0
 	for _, elem := range testData {
-		get, getErr := AndFilter(elem.filter, elem.data)
+		get, getErr := andFilter(elem.filter, elem.data)
 		if len(elem.expected) != len(get) {
 			t.Errorf("AndFilter() FAILED, Test No: %d, Expected: %v Actual: %v", i, elem.expected, get)
 		} else if !(reflect.DeepEqual(get, elem.expected)) && len(elem.expected) != 0 {
@@ -135,7 +141,8 @@ func TestOrFilter(t *testing.T) {
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
 		{"k": "k k k", "l": "l l l", "JobDescription": "l b l"},
-		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"}}
+		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"},
+	}
 
 	filter0 := []string{}
 	filter1 := []string{"a"}
@@ -153,7 +160,8 @@ func TestOrFilter(t *testing.T) {
 		{"e": "e e e", "f": "f f f", "JobDescription": "A g f"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i b"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
-		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"}}
+		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
+	}
 
 	expected2 := []map[string]string{
 		{"a": "a a a", "b": "b b b", "JobDescription": "a b c"},
@@ -165,7 +173,8 @@ func TestOrFilter(t *testing.T) {
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
 		{"k": "k k k", "l": "l l l", "JobDescription": "l b l"},
-		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"}}
+		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"},
+	}
 
 	expected3 := []map[string]string{
 		{"a": "a a a", "b": "b b b", "JobDescription": "a b c"},
@@ -177,7 +186,8 @@ func TestOrFilter(t *testing.T) {
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
 		{"k": "k k k", "l": "l l l", "JobDescription": "l b l"},
-		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"}}
+		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"},
+	}
 
 	expected4 := []map[string]string{
 		{"a": "a a a", "b": "b b b", "JobDescription": "a b c"},
@@ -187,14 +197,16 @@ func TestOrFilter(t *testing.T) {
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
 		{"k": "k k k", "l": "l l l", "JobDescription": "l b l"},
-		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"}}
+		{"k": "k k k", "l": "l l l", "JobDescription": "l B l"},
+	}
 
 	expected5 := []map[string]string{
 		{"e": "e e e", "f": "f f f", "JobDescription": "a g f"},
 		{"e": "e e e", "f": "f f f", "JobDescription": "A g f"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i b"},
 		{"h": "h h h", "i": "i i i", "JobDescription": "a i B"},
-		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"}}
+		{"h": "h h h", "i": "i i i", "JobDescription": "b i a"},
+	}
 
 	testData := []FilterData{
 		{sample, filter0, expected0, true},
@@ -206,7 +218,7 @@ func TestOrFilter(t *testing.T) {
 	}
 	i := 0
 	for _, elem := range testData {
-		get, getErr := OrFilter(elem.filter, elem.data)
+		get, getErr := orFilter(elem.filter, elem.data)
 		if len(elem.expected) != len(get) {
 			t.Errorf("OrFilter() FAILED, Test No: %d, Expected: %v Actual: %v", i, elem.expected, get)
 		} else if !(reflect.DeepEqual(get, elem.expected)) && len(elem.expected) != 0 {
@@ -234,25 +246,30 @@ func TestDataConversion(t *testing.T) {
 	data2 := map[string][]string{
 		"example": {"a", "b", "c"},
 		"hello":   {"v", "d", "t"},
-		"yum":     {"e", "r", "p"}}
+		"yum":     {"e", "r", "p"},
+	}
 	data3 := map[string][]string{
 		"pie":   {"123", "34", ""},
 		"hack":  {"9ie", "", "3"},
-		"pizza": {"", "2", "23"}}
+		"pizza": {"", "2", "23"},
+	}
 
 	expect0 := []map[string]string{}
 	expect1 := []map[string]string{
 		{"example": "a"},
 		{"example": "b"},
-		{"example": "c"}}
+		{"example": "c"},
+	}
 	expect2 := []map[string]string{
 		{"example": "a", "hello": "v", "yum": "e"},
 		{"example": "b", "hello": "d", "yum": "r"},
-		{"example": "c", "hello": "r", "yum": "p"}}
+		{"example": "c", "hello": "r", "yum": "p"},
+	}
 	expect3 := []map[string]string{
 		{"pie": "123", "hack": "9ie", "pizza": ""},
 		{"pie": "34", "hack": "", "pizza": "2"},
-		{"pie": "", "hack": "3", "pizza": "23"}}
+		{"pie": "", "hack": "3", "pizza": "23"},
+	}
 
 	testData := []DataConv{
 		{data0, expect0, true},
@@ -264,7 +281,7 @@ func TestDataConversion(t *testing.T) {
 	i := 0
 	for _, elem := range testData {
 		var get []map[string]string
-		get, getErr := DataConversion(elem.data, elem.expected)
+		get, getErr := dataConversion(elem.data, elem.expected)
 		if len(elem.expected) != len(get) {
 			t.Errorf("DataConversion() FAILED, Test No: %d, Expected: %v Actual: %v", i, elem.expected, get)
 		} else if !(reflect.DeepEqual(get, elem.expected)) && len(elem.expected) != 0 {

@@ -21,28 +21,28 @@ const (
 )
 
 const (
-	info    string = "Info: "
-	err     string = "Error: "
-	debug   string = "Debug: "
-	warning string = "Warning: "
+	info string = "Info: "
+	err  string = "Error: "
 )
 
-type JobPosting struct {
+type jobPosting struct {
 	Title          string
 	Company        string
 	Location       string
 	JobDescription string
 }
 
-const TITLE_KEY string = "Title"
-const COMPANY_KEY string = "Company"
-const LOCATION_KEY string = "Location"
-const JOB_DESCRIPTION_KEY string = "JobDescription"
+const (
+	TITLE_KEY           string = "Title"
+	COMPANY_KEY         string = "Company"
+	LOCATION_KEY        string = "Location"
+	JOB_DESCRIPTION_KEY string = "JobDescription"
+)
 
 // REQUIRES: 	none
 // MODIFIES: 	none
 // EFFECTS: 	logs error
-func LogErr(err error) {
+func logErr(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,20 +51,20 @@ func LogErr(err error) {
 // REQUIRES: 	none
 // MODIFIES: 	none
 // EFFECTS: 	returns true, nil if map is not empty and balanced, otherwise return false, reason
-func CheckOutputJobs(j map[string][]string) (bool, error) {
+func checkOutputJobs(j map[string][]string) (bool, error) {
 	if len(j) == 0 {
-		return false, errors.New("Input map is empty.")
+		return false, errors.New("input map is empty")
 	}
 
-	return IsMapBalanced(j)
+	return isMapBalanced(j)
 }
 
 // REQUIRES: 	none
 // MODIFIES: 	none
 // EFFECTS: 	returns true, nil if map is balanced, otherwise return false, reason
-func IsMapBalanced(m map[string][]string) (bool, error) {
+func isMapBalanced(m map[string][]string) (bool, error) {
 	lengths := map[string]int{}
-	for key, _ := range m {
+	for key := range m {
 		lengths[key] = len(m[key])
 	}
 
@@ -82,7 +82,7 @@ func IsMapBalanced(m map[string][]string) (bool, error) {
 
 			} else {
 				isBalanced = false
-				return isBalanced, errors.New(fmt.Sprintf("Unbalanced Map - Key: %s, Size: %d, Key: %s, Size: %d", prevKey, prevLen, key, length))
+				return isBalanced, fmt.Errorf("Unbalanced Map - Key: %s, Size: %d, Key: %s, Size: %d", prevKey, prevLen, key, length)
 			}
 		}
 	}
@@ -93,11 +93,11 @@ func IsMapBalanced(m map[string][]string) (bool, error) {
 // REQUIRES: 		none
 // MODIFIESES: 	strs
 // EFFECTS:			return a modified string slice for string matching
-func RegexPrep(strs []string) ([]string, error) {
+func regexPrep(strs []string) ([]string, error) {
 	if len(strs) == 0 {
 		return strs, errors.New("Keyword string slice is empty")
 	}
-	for i, _ := range strs {
+	for i := range strs {
 		// match any ".", not case sensitive (?i)
 		strs[i] = "(?i)" + strs[i]
 	}
@@ -107,9 +107,9 @@ func RegexPrep(strs []string) ([]string, error) {
 // REQUIRES: 		none
 // MODIFIESES: 	none
 // EFFECTS:			error or filteredJobs that includes all (add) keywords provided based on the job description
-func AndFilter(keywords []string, unfilteredJobs []map[string]string) ([]map[string]string, error) {
+func andFilter(keywords []string, unfilteredJobs []map[string]string) ([]map[string]string, error) {
 	var filteredJobs []map[string]string
-	keywords, err := RegexPrep(keywords)
+	keywords, err := regexPrep(keywords)
 	if err != nil {
 		return nil, err
 	}
@@ -136,10 +136,10 @@ func AndFilter(keywords []string, unfilteredJobs []map[string]string) ([]map[str
 // REQUIRES: 		none
 // MODIFIESES: 	none
 // EFFECTS:			error or filteredJobs that includes any (or) keywords provided based on the job description
-func OrFilter(keywords []string, unfilteredJobs []map[string]string) ([]map[string]string, error) {
+func orFilter(keywords []string, unfilteredJobs []map[string]string) ([]map[string]string, error) {
 	var filteredJobs []map[string]string
 	// prepare keyword for regex string match
-	keywords, err := RegexPrep(keywords)
+	keywords, err := regexPrep(keywords)
 	if err != nil {
 		return nil, err
 	}
@@ -173,24 +173,22 @@ func OrFilter(keywords []string, unfilteredJobs []map[string]string) ([]map[stri
 // REQUIRES: 		none
 // MODIFIESES: 	none
 // EFFECTS:			Initializes colly collector
-func InitCollyCollector() *colly.Collector {
-	c := colly.NewCollector(
-		colly.MaxDepth(1), //crawl depth one
-	)
+func initCollyCollector() *colly.Collector {
+	c := colly.NewCollector(colly.MaxDepth(1))
 	return c
 }
 
 // REQUIRES: 		none
 // MODIFIESES: 	none
 // EFFECTS:			returns a jobs postings
-func ScrapeJobs(url string, headerK string, headerVal string, selector JobPosting, c *colly.Collector, wg *sync.WaitGroup) map[string][]string {
+func scrapeJobs(url string, headerK string, headerVal string, selector jobPosting, c *colly.Collector, wg *sync.WaitGroup) map[string][]string {
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Set(headerK, headerVal)
 		log.Printf("%s Accessing site %s\n", info, url)
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		LogErr(err)
+		logErr(err)
 	})
 
 	// scrub site based selector
@@ -210,7 +208,8 @@ func ScrapeJobs(url string, headerK string, headerVal string, selector JobPostin
 		})
 	}
 
-	c.Visit(url)
+	err := c.Visit(url)
+	logErr(err)
 
 	return jobs
 }
@@ -218,8 +217,8 @@ func ScrapeJobs(url string, headerK string, headerVal string, selector JobPostin
 // REQUIRES: 		none
 // MODIFIESES: 	none
 // EFFECTS:			convert map[string][]string to []map[string]string
-func DataConversion(mapSlice map[string][]string, sliceMap []map[string]string) ([]map[string]string, error) {
-	result, err := CheckOutputJobs(mapSlice)
+func dataConversion(mapSlice map[string][]string, sliceMap []map[string]string) ([]map[string]string, error) {
+	result, err := checkOutputJobs(mapSlice)
 	if !result {
 		return nil, err
 	}
@@ -244,7 +243,7 @@ func main() {
 	var filteredPostings []map[string]string
 
 	var wgHTML sync.WaitGroup
-	googleSelector := JobPosting{
+	googleSelector := jobPosting{
 		"h2.KLsYvd[jsname=\"SBkjJd\"]",
 		"div.nJlQNd.sMzDkb",
 		"div.sMzDkb:not(.nJlQNd)",
@@ -261,34 +260,39 @@ func main() {
 	site := "https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB"
 
 	file, err := os.Create(logFile)
-	LogErr(err)
-	defer file.Close()
+	logErr(err)
+	defer func() {
+		err := file.Close()
+		logErr(err)
+	}()
 	log.SetOutput(file)
 
-	c := InitCollyCollector()
+	c := initCollyCollector()
 
-	jobs := ScrapeJobs(site, headerKey, headerValue, googleSelector, c, &wgHTML)
+	jobs := scrapeJobs(site, headerKey, headerValue, googleSelector, c, &wgHTML)
 	wgHTML.Wait()
 
 	var unFilteredPostings []map[string]string
-	unFilteredPostings, err = DataConversion(jobs, unFilteredPostings)
-	LogErr(err)
+	unFilteredPostings, err = dataConversion(jobs, unFilteredPostings)
+	logErr(err)
 
 	// filter twice
-	filteredPostings, err = OrFilter(orKeywords, unFilteredPostings)
-	LogErr(err)
-	filteredPostings, err = AndFilter(andKeywords, filteredPostings)
-	LogErr(err)
+	filteredPostings, err = orFilter(orKeywords, unFilteredPostings)
+	logErr(err)
+	filteredPostings, err = andFilter(andKeywords, filteredPostings)
+	logErr(err)
 
 	// write to file
 	log.Printf("%s Adding jobs to %s\n", info, jobsFile)
 	f, err := os.Create(jobsFile)
-	LogErr(err)
-	defer f.Close()
+	logErr(err)
+	defer func() {
+		err := f.Close()
+		logErr(err)
+	}()
 
 	jobsData, err := json.Marshal(filteredPostings)
-	LogErr(err)
+	logErr(err)
 	_, err = f.Write(jobsData)
-	LogErr(err)
-
+	logErr(err)
 }
