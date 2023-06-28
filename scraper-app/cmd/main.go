@@ -32,12 +32,28 @@ type jobPosting struct {
 	JobDescription string
 }
 
+// (site, headerKey, headerValue, googleSelector, c, &wgHTML)
+
+type jobScraper struct {
+	url         string
+	headerKey   string
+	headerValue string
+	jobSelector jobPosting
+	cPtr        *colly.Collector
+	wgPtr       *sync.WaitGroup
+}
+
 const (
 	TITLE_KEY           string = "Title"
 	COMPANY_KEY         string = "Company"
 	LOCATION_KEY        string = "Location"
 	JOB_DESCRIPTION_KEY string = "JobDescription"
 )
+
+type jobs struct {
+	mu       sync.Mutex
+	jobsInfo map[string][]string
+}
 
 // REQUIRES: 	none
 // MODIFIES: 	none
@@ -181,19 +197,20 @@ func initCollyCollector() *colly.Collector {
 // REQUIRES: 		none
 // MODIFIESES: 	none
 // EFFECTS:			returns a jobs postings
-func scrapeJobs(url string, headerK string, headerVal string, selector jobPosting, c *colly.Collector, wg *sync.WaitGroup) map[string][]string {
-	c.OnRequest(func(r *colly.Request) {
-		r.Headers.Set(headerK, headerVal)
-		log.Printf("%s Accessing site %s\n", info, url)
+func scrapeJobs(js jobScraper) jobs {
+	js.cPtr.OnRequest(func(r *colly.Request) {
+		r.Headers.Set(js.headerKey, js.headerValue)
+		log.Printf("%s Accessing site %s\n", info, js.url)
 	})
 
-	c.OnError(func(r *colly.Response, err error) {
+	js.cPtr.OnError(func(r *colly.Response, err error) {
 		logErr(err)
 	})
 
 	// scrub site based selector
-	jobs := map[string][]string{}
-	v := reflect.ValueOf(selector)
+	var jobs jobs
+	jobs.jobsInfo = make(map[string][]string)
+	v := reflect.ValueOf(js.jobSelector)
 	if v.NumField() < 1 {
 		log.Fatalf("%s Selector does not have any fields", err)
 	}
@@ -201,14 +218,16 @@ func scrapeJobs(url string, headerK string, headerVal string, selector jobPostin
 	for i := 0; i < v.NumField(); i++ {
 		// remove closure property of anonymous functions
 		j := i
-		c.OnHTML(v.Field(j).Interface().(string), func(e *colly.HTMLElement) {
-			wg.Add(1)
-			jobs[v.Type().Field(j).Name] = append(jobs[v.Type().Field(j).Name], e.Text)
-			defer wg.Done()
+		js.cPtr.OnHTML(v.Field(j).Interface().(string), func(e *colly.HTMLElement) {
+			js.wgPtr.Add(1)
+			jobs.mu.Lock()
+			defer jobs.mu.Unlock()
+			jobs.jobsInfo[v.Type().Field(j).Name] = append(jobs.jobsInfo[v.Type().Field(j).Name], e.Text)
+			defer js.wgPtr.Done()
 		})
 	}
 
-	err := c.Visit(url)
+	err := js.cPtr.Visit(js.url)
 	logErr(err)
 
 	return jobs
@@ -243,11 +262,22 @@ func main() {
 	var filteredPostings []map[string]string
 
 	var wgHTML sync.WaitGroup
+	c := initCollyCollector()
+
 	googleSelector := jobPosting{
 		"h2.KLsYvd[jsname=\"SBkjJd\"]",
 		"div.nJlQNd.sMzDkb",
 		"div.sMzDkb:not(.nJlQNd)",
 		"span.HBvzbc",
+	}
+
+	googleScraper := jobScraper{
+		"https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB",
+		headerKey,
+		headerValue,
+		googleSelector,
+		c,
+		&wgHTML,
 	}
 
 	// googleSelector := JobPosting{
@@ -257,8 +287,6 @@ func main() {
 	// 	".whazf span.HBvzbc",
 	// }
 
-	site := "https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB"
-
 	file, err := os.Create(logFile)
 	logErr(err)
 	defer func() {
@@ -267,13 +295,11 @@ func main() {
 	}()
 	log.SetOutput(file)
 
-	c := initCollyCollector()
-
-	jobs := scrapeJobs(site, headerKey, headerValue, googleSelector, c, &wgHTML)
+	jobs := scrapeJobs(googleScraper)
 	wgHTML.Wait()
 
 	var unFilteredPostings []map[string]string
-	unFilteredPostings, err = dataConversion(jobs, unFilteredPostings)
+	unFilteredPostings, err = dataConversion(jobs.jobsInfo, unFilteredPostings)
 	logErr(err)
 
 	// filter twice
