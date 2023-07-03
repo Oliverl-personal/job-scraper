@@ -4,25 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"regexp"
 	"sync"
 
+	"scraper-app/utils"
+
 	"github.com/gocolly/colly"
 )
 
 const (
-	logFile     string = "../tmp/log.txt"
-	jobsFile    string = "../tmp/jobs.json"
 	headerKey   string = "User-Agent"
 	headerValue string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-)
-
-const (
-	info string = "Info: "
-	err  string = "Error: "
 )
 
 type jobPosting struct {
@@ -57,28 +51,18 @@ type jobs struct {
 
 // REQUIRES: 	none
 // MODIFIES: 	none
-// EFFECTS: 	logs error
-func logErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// REQUIRES: 	none
-// MODIFIES: 	none
 // EFFECTS: 	returns true, nil if map is not empty and balanced, otherwise return false, reason
-func checkOutputJobs(j map[string][]string) (bool, error) {
+func checkScrapedJobs(j map[string][]string) (bool, error) {
 	if len(j) == 0 {
-		return false, errors.New("input map is empty")
+		return false, errors.New("scraped jobs information is empty")
 	}
 
-	return isMapBalanced(j)
+	return checkJobInfoCompleteness(j)
 }
 
-// REQUIRES: 	none
-// MODIFIES: 	none
-// EFFECTS: 	returns true, nil if map is balanced, otherwise return false, reason
-func isMapBalanced(m map[string][]string) (bool, error) {
+// Job information are split up into categories: job title, job description, job location... etc
+// checks if len(job_title) == len(job_description) == len(job_location) ...
+func checkJobInfoCompleteness(m map[string][]string) (bool, error) {
 	lengths := map[string]int{}
 	for key := range m {
 		lengths[key] = len(m[key])
@@ -98,7 +82,7 @@ func isMapBalanced(m map[string][]string) (bool, error) {
 
 			} else {
 				isBalanced = false
-				return isBalanced, fmt.Errorf("Unbalanced Map - Key: %s, Size: %d, Key: %s, Size: %d", prevKey, prevLen, key, length)
+				return isBalanced, fmt.Errorf("scraped job information incomplete: key: %s, size: %d, key: %s, size: %d", prevKey, prevLen, key, length)
 			}
 		}
 	}
@@ -111,7 +95,7 @@ func isMapBalanced(m map[string][]string) (bool, error) {
 // EFFECTS:			return a modified string slice for string matching
 func regexPrep(strs []string) ([]string, error) {
 	if len(strs) == 0 {
-		return strs, errors.New("Keyword string slice is empty")
+		return strs, errors.New("keyword string slice is empty")
 	}
 	for i := range strs {
 		// match any ".", not case sensitive (?i)
@@ -200,11 +184,11 @@ func initCollyCollector() *colly.Collector {
 func scrapeJobs(js jobScraper) jobs {
 	js.cPtr.OnRequest(func(r *colly.Request) {
 		r.Headers.Set(js.headerKey, js.headerValue)
-		log.Printf("%s Accessing site %s\n", info, js.url)
+		utils.Logger.Debug(fmt.Sprintf("accessing site %s", js.url))
 	})
 
 	js.cPtr.OnError(func(r *colly.Response, err error) {
-		logErr(err)
+		utils.FatalError(fmt.Errorf("%v", err))
 	})
 
 	// scrub site based selector
@@ -212,7 +196,7 @@ func scrapeJobs(js jobScraper) jobs {
 	jobs.jobsInfo = make(map[string][]string)
 	v := reflect.ValueOf(js.jobSelector)
 	if v.NumField() < 1 {
-		log.Fatalf("%s Selector does not have any fields", err)
+		utils.FatalError(fmt.Errorf("selector does not have any fields"))
 	}
 
 	for i := 0; i < v.NumField(); i++ {
@@ -228,7 +212,9 @@ func scrapeJobs(js jobScraper) jobs {
 	}
 
 	err := js.cPtr.Visit(js.url)
-	logErr(err)
+	if err != nil {
+		utils.FatalError(err)
+	}
 
 	return jobs
 }
@@ -237,7 +223,7 @@ func scrapeJobs(js jobScraper) jobs {
 // MODIFIESES: 	none
 // EFFECTS:			convert map[string][]string to []map[string]string
 func dataConversion(mapSlice map[string][]string, sliceMap []map[string]string) ([]map[string]string, error) {
-	result, err := checkOutputJobs(mapSlice)
+	result, err := checkScrapedJobs(mapSlice)
 	if !result {
 		return nil, err
 	}
@@ -255,6 +241,8 @@ func dataConversion(mapSlice map[string][]string, sliceMap []map[string]string) 
 }
 
 func main() {
+	utils.LoadEnv("../.env")
+	var jobsDir string = utils.GetEnv("JOBS_DIR")
 	// Fields
 	andKeywords := []string{"the", "a"}
 	orKeywords := []string{"TECH", "SOFT"}
@@ -265,10 +253,10 @@ func main() {
 	c := initCollyCollector()
 
 	googleSelector := jobPosting{
-		"h2.KLsYvd[jsname=\"SBkjJd\"]",
-		"div.nJlQNd.sMzDkb",
-		"div.sMzDkb:not(.nJlQNd)",
-		"span.HBvzbc",
+		"ul>li:nth-of-type(1) h2.KLsYvd",
+		"ul>li:nth-of-type(1) div.nJlQNd.sMzDkb",
+		"ul>li:nth-of-type(1) div.sMzDkb:not(.nJlQNd)",
+		"ul>li:nth-of-type(1) span.HBvzbc",
 	}
 
 	googleScraper := jobScraper{
@@ -280,45 +268,52 @@ func main() {
 		&wgHTML,
 	}
 
-	// googleSelector := JobPosting{
-	// 	".whazf h2.KLsYvd",
-	// 	".whazf div.nJlQNd.sMzDkb",
-	// 	".whazf div.sMzDkb:not(.nJlQNd)",
-	// 	".whazf span.HBvzbc",
-	// }
-
-	file, err := os.Create(logFile)
-	logErr(err)
-	defer func() {
-		err := file.Close()
-		logErr(err)
-	}()
-	log.SetOutput(file)
-
 	jobs := scrapeJobs(googleScraper)
 	wgHTML.Wait()
 
 	var unFilteredPostings []map[string]string
-	unFilteredPostings, err = dataConversion(jobs.jobsInfo, unFilteredPostings)
-	logErr(err)
+	unFilteredPostings, err := dataConversion(jobs.jobsInfo, unFilteredPostings)
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
 
 	// filter twice
 	filteredPostings, err = orFilter(orKeywords, unFilteredPostings)
-	logErr(err)
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
 	filteredPostings, err = andFilter(andKeywords, filteredPostings)
-	logErr(err)
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
 
 	// write to file
-	log.Printf("%s Adding jobs to %s\n", info, jobsFile)
+	utils.Logger.Debug(fmt.Sprintf("adding jobs to jobs file"))
+	_, err = os.Stat(jobsDir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(jobsDir, 0777)
+		if err != nil {
+			utils.FatalError(fmt.Errorf("unable to create jobs directory"))
+		}
+	}
+	jobsFile := jobsDir + "/jobs.json"
 	f, err := os.Create(jobsFile)
-	logErr(err)
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
 	defer func() {
 		err := f.Close()
-		logErr(err)
+		if err != nil {
+			utils.FatalError(fmt.Errorf("%v, ", err))
+		}
 	}()
 
 	jobsData, err := json.Marshal(filteredPostings)
-	logErr(err)
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
 	_, err = f.Write(jobsData)
-	logErr(err)
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
 }

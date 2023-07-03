@@ -26,7 +26,7 @@ func TestCheckOutputJobs(t *testing.T) {
 		{data: sample4, expRes: false, expErr: true},
 	}
 	for _, elem := range testData {
-		get, getErr := checkOutputJobs(elem.data)
+		get, getErr := checkScrapedJobs(elem.data)
 		if get != elem.expRes {
 			t.Errorf("CheckOutputJobs() FAILED: Expected %t, Actual: %t", get, elem.expRes)
 		}
