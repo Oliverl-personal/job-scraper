@@ -10,11 +10,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func LoadEnv(path string) {
-	if err := godotenv.Load(path); err != nil {
-		Logger.Warn(".env file is missing - not loaded")
+func LoadEnv(filename string) {
+	fmt.Println("in load env")
+	err := godotenv.Load(filename); 
+	fmt.Println("in load, Load() resolved")
+
+	if err != nil {
+		fmt.Println("warning: .env file is missing - not loaded")
 	} else {
-		Logger.Debug(".env loaded")
+		fmt.Println("info: .env loaded")
 	}
 }
 
@@ -30,8 +34,9 @@ func GetEnv(key string) string {
 func GetEnvOrDefault(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
+	} else {
+		return fallback
 	}
-	return fallback
 }
 
 func GetIntEnvOrDefault(key string, fallback int) int {
