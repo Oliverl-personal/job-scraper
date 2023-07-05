@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 
 	"go.uber.org/zap"
@@ -19,7 +18,6 @@ var consoleLogger zapcore.Core
 // initializes a logger. If environment is not loaded before calling this function
 // the logger will take on default logging settings
 func InitLogger() {
-	fmt.Println("in initlogger")
 	fileLogger = zapcore.NewCore(
 		jsonEncoder,
 		zapcore.AddSync(&lumberjack.Logger{
@@ -36,12 +34,10 @@ func InitLogger() {
 		logLevel(),
 	)
 	Logger = zap.New(zapcore.NewTee(loggers()...), zapOpts()...)
-	fmt.Println("init logger complete")
 }
 
 // Wrapper for zapcore.Level. Returns log level based on environment log level, else default
 func logLevel() zapcore.Level {
-	fmt.Println("Log level")
 	if level, err := zapcore.ParseLevel(GetEnvOrDefault("LOG_LEVEL", "INFO")); err == nil {
 		return level
 	} else {

@@ -11,10 +11,7 @@ import (
 )
 
 func LoadEnv(filename string) {
-	fmt.Println("in load env")
-	err := godotenv.Load(filename); 
-	fmt.Println("in load, Load() resolved")
-
+	err := godotenv.Load(filename)
 	if err != nil {
 		fmt.Println("warning: .env file is missing - not loaded")
 	} else {

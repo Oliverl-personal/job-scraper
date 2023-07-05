@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sync"
 
+	app "scraper-app/apps"
 	"scraper-app/utils"
 
 	"github.com/gocolly/colly"
@@ -18,11 +19,6 @@ func init() {
 	utils.LoadEnv("../.env")
 	utils.InitLogger()
 }
-
-const (
-	headerKey   string = "User-Agent"
-	headerValue string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-)
 
 type jobPosting struct {
 	Title          string
@@ -246,7 +242,7 @@ func dataConversion(mapSlice map[string][]string, sliceMap []map[string]string) 
 }
 
 func main() {
-	// utils.LoadEnv("../.env")
+
 	var jobsDir string = utils.GetEnv("JOBS_DIR")
 	// Fields
 	andKeywords := []string{"the", "a"}
@@ -266,8 +262,8 @@ func main() {
 
 	googleScraper := jobScraper{
 		"https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB",
-		headerKey,
-		headerValue,
+		app.HeaderKey,
+		app.HeaderValue,
 		googleSelector,
 		c,
 		&wgHTML,
