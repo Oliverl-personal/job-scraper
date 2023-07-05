@@ -7,16 +7,17 @@ import (
 	"sync"
 
 	scraper "scraper-app/apps/scraper"
+	tagger "scraper-app/apps/tagger"
 	"scraper-app/utils"
 )
 
 func init() {
 	utils.LoadEnv("../.env")
-	utils.InitLogger()
 }
 
 func main() {
-
+	utils.InitLogger()
+	tagger.InitTagger()
 	var jobsDir string = utils.GetEnv("JOBS_DIR")
 	// Fields
 	andKeywords := []string{"the", "a"}
