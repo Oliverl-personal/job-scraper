@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	apps "scraper-app/apps"
+	scraper "scraper-app/apps/scraper"
 	"scraper-app/utils"
 )
 
@@ -25,39 +25,39 @@ func main() {
 	var filteredPostings []map[string]string
 
 	var wgHTML sync.WaitGroup
-	c := apps.InitCollyCollector()
+	c := scraper.InitCollyCollector()
 
-	googleSelector := apps.JobPosting{
+	googleSelector := scraper.JobPosting{
 		Title:          "ul>li:nth-of-type(1) h2.KLsYvd",
 		Company:        "ul>li:nth-of-type(1) div.nJlQNd.sMzDkb",
 		Location:       "ul>li:nth-of-type(1) div.sMzDkb:not(.nJlQNd)",
 		JobDescription: "ul>li:nth-of-type(1) span.HBvzbc",
 	}
 
-	googleScraper := apps.JobScraper{
+	googleScraper := scraper.JobScraper{
 		Url:         "https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB",
-		HeaderKey:   apps.HeaderKey,
-		HeaderValue: apps.HeaderValue,
+		HeaderKey:   scraper.HeaderKey,
+		HeaderValue: scraper.HeaderValue,
 		JobSelector: googleSelector,
 		CPtr:        c,
 		WgPtr:       &wgHTML,
 	}
 
-	jobs := apps.ScrapeJobs(googleScraper)
+	jobs := scraper.ScrapeJobs(googleScraper)
 	wgHTML.Wait()
 
 	var unFilteredPostings []map[string]string
-	unFilteredPostings, err := apps.DataConversion(jobs.JobsInfo, unFilteredPostings)
+	unFilteredPostings, err := scraper.DataConversion(jobs.JobsInfo, unFilteredPostings)
 	if err != nil {
 		utils.FatalError(fmt.Errorf("%v, ", err))
 	}
 
 	// filter twice
-	filteredPostings, err = apps.OrFilter(orKeywords, unFilteredPostings)
+	filteredPostings, err = scraper.OrFilter(orKeywords, unFilteredPostings)
 	if err != nil {
 		utils.FatalError(fmt.Errorf("%v, ", err))
 	}
-	filteredPostings, err = apps.AndFilter(andKeywords, filteredPostings)
+	filteredPostings, err = scraper.AndFilter(andKeywords, filteredPostings)
 	if err != nil {
 		utils.FatalError(fmt.Errorf("%v, ", err))
 	}
