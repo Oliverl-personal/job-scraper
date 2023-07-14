@@ -6,8 +6,8 @@ import (
 	"os"
 	"sync"
 
-	scraper "scraper-app/apps/scraper"
-	tagger "scraper-app/apps/tagger"
+	"scraper-app/apps/scraper"
+	"scraper-app/apps/tagger"
 	"scraper-app/utils"
 )
 
@@ -19,12 +19,12 @@ func main() {
 	utils.InitLogger()
 	tagger.InitTagger()
 	var jobsDir string = utils.GetEnv("JOBS_DIR")
-	// Fields
 	andKeywords := []string{"the", "a"}
 	orKeywords := []string{"TECH", "SOFT"}
 
 	var filteredPostings []map[string]string
 
+	// Scraping
 	var wgHTML sync.WaitGroup
 	c := scraper.InitCollyCollector()
 
@@ -36,7 +36,7 @@ func main() {
 	}
 
 	googleScraper := scraper.JobScraper{
-		Url:         "https://www.google.com/search?q=google+jobs&oq=google+jobs&aqs=chrome.0.69i59j0i512j69i59j0i131i433i512j0i512l2j69i60l2.2600j0j7&sourceid=chrome&ie=UTF-8&ibp=htl;jobs&sa=X&ved=2ahUKEwj755zf-53_AhX_GDQIHQ-WBH8Qkd0GegQIDhAB",
+		Url:         "https://www.google.com/search?q=Software+Engineer+(Kubernetes)&ibp=htl;jobs&sa=X&ved=2ahUKEwjUjoCjqo2AAxWiKX0KHS71CbYQkd0GegQIHxAB#fpstate=tldetail&sxsrf=AB5stBhKdMVijf2ealc389ZerIZtawopnA:1689307884565&htivrt=jobs&htidocid=dUFtP4LbkrIAAAAAAAAAAA%3D%3D",
 		HeaderKey:   scraper.HeaderKey,
 		HeaderValue: scraper.HeaderValue,
 		JobSelector: googleSelector,
@@ -53,7 +53,6 @@ func main() {
 		utils.FatalError(fmt.Errorf("%v, ", err))
 	}
 
-	// filter twice
 	filteredPostings, err = scraper.OrFilter(orKeywords, unFilteredPostings)
 	if err != nil {
 		utils.FatalError(fmt.Errorf("%v, ", err))
@@ -63,7 +62,6 @@ func main() {
 		utils.FatalError(fmt.Errorf("%v, ", err))
 	}
 
-	// write to file
 	utils.Logger.Debug(fmt.Sprintf("adding jobs to jobs file"))
 	_, err = os.Stat(jobsDir)
 	if os.IsNotExist(err) {
@@ -92,4 +90,12 @@ func main() {
 	if err != nil {
 		utils.FatalError(fmt.Errorf("%v, ", err))
 	}
+
+	// Tagging
+	jobTags, err := tagger.TagJobDescription(filteredPostings[0]["JobDescription"])
+	if err != nil {
+		utils.FatalError(fmt.Errorf("%v, ", err))
+	}
+	fmt.Println(jobTags)
+
 }
